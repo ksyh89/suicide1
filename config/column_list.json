@@ -1,5 +1,6 @@
 {
-  "AUD": "object",
+  "AUC": "object",
+  "Class": "object",
   "BS6_2_1": "float64",
   "BS6_2": "float64",
   "HE_PLS": "float64",

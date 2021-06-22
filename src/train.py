@@ -225,8 +225,12 @@ def train_logisticregressoin(info: TrainInformation, split, fold):
 
     import sklearn.linear_model
 
+    from imblearn.over_sampling import SMOTE
+    smote = SMOTE(random_state=101)
+    features, label = smote.fit_resample(train_dataset.train_data[:, 1:], test_dataset.train_data[:, :1])
+
     regressor = sklearn.linear_model.LogisticRegression()
-    regressor.fit(train_dataset.train_data[:, 1:], test_dataset.train_data[:, :1])
+    regressor.fit(features, label)
     preds = regressor.predict_proba(test_dataset.data[:, 1:])[:, 1]
     auc = train_utils.compute_AUC(test_dataset.data[:, :1], preds)
     print(auc)
@@ -417,6 +421,18 @@ def train_ml_compare(info: TrainInformation, split, fold):
 
     train_input = train_dataset.train_data[:, 1:]
     train_label = test_dataset.train_data[:, :1]
+    print (f'train_input.shape is {train_input.shape}')
+    print (f'train_label.shape is {train_label.shape}')
+
+    import sklearn.linear_model
+    print ("hi")
+
+    from imblearn.over_sampling import SMOTENC
+    smote = SMOTENC(random_state=42, categorical_features=[1, 235])
+    train_input, train_label = smote.fit_resample(train_input, train_label)
+    train_label = torch.unsqueeze(train_label, -1)
+    print (f'train_input.shape is {train_input.shape}')
+    print (f'train_label.shape is {train_label.shape}')
 
     # logisticregressoin ######################
 
@@ -648,7 +664,7 @@ def run(filename):
         #    print("Skipping split %d" % split)
         #    continue
 
-        if False:
+        if True:
             # train_logisticregressoin(info, split, fold)
             # train_supportvectormachine(info, split, fold)
             train_ml_compare(info, split, fold)

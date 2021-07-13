@@ -25,6 +25,7 @@ class Dataset(data.Dataset):
             self.convert_and_save(processed_datapath)
 
         self.data = np.load(processed_datapath).astype(np.float32)
+        print(f'self.data.shape is {self.data.shape}')
         assert phase in ["train", "test"]
 
 
@@ -64,6 +65,17 @@ class Dataset(data.Dataset):
         column_type = json.load(open(f"{CONFIGPATH}/column_list.json"))
 
         df = pd.read_csv(datapath, sep=",", dtype=column_type)
+        # smote
+        from imblearn.over_sampling import SMOTENC
+        smote = SMOTENC(random_state=42, categorical_features=[1, 235])
+        train_input, train_label = smote.fit_resample(df[:, 1:], df[:, :1])
+
+        train_label = torch.unsqueeze(train_label, -1)
+        print(f'train_input.shape is {train_input.shape}')
+        print(f'train_label.shape is {train_label.shape}')
+        df[:, 1:] = train_input
+        df[:, :1] = train_label
+
         df, column_names = self.convert_dataset(df, column_type)
 
         np.random.shuffle(df)
@@ -114,6 +126,8 @@ class Dataset(data.Dataset):
             print(col.shape, empty.shape)
             return np.concatenate([empty[:, None].astype(float), col], axis=1)
         else:
+            print('numerical')
+            print(f'num 1 col.shape is {col.shape}')
             col = col.astype(np.float32)
             col[empty] = 0.0
             max_val = np.nanmax(col)
@@ -144,6 +158,7 @@ class Dataset(data.Dataset):
                         is_special = np.logical_or(is_special, col == max_small)
                 col[is_special] = 0.0
                 return_list.append(is_special.astype(float))
+            print(f'num 2 np.array(return_list).shape is {col.shape}')
 
             # 새로 만들어보는중
 
@@ -177,6 +192,8 @@ class Dataset(data.Dataset):
             # print(col[-100:])
             return_list.append(col)
             #print(round(col.nbytes / 1024 / 1024, 2))
+            print(f'num 3 np.array(return_list).shape is {col.shape}')
+            print(f'np.stack(return_list, axis=1).shape is {(np.stack(return_list, axis=1)).shape}')
             return np.stack(return_list, axis=1)
 
         return return_list
@@ -207,12 +224,13 @@ class Dataset(data.Dataset):
             col[col == " "] = np.nan
 
             # 맨처음 AUD / BS6_2_2 컬럼 이후로부터는 categorical 데이터
+            print(f'1 col.shape is {col.shape}')
             col = self.gather_special_responses(col, c_type, column_name)
-            print(col.shape)
+            print(f'2 col.shape is {col.shape}')
             #col = np.stack(col, axis=1)
             colsize = col.shape[1]
             col = np.concatenate([col, np.zeros((col.shape[0], 25 - colsize), dtype=col.dtype)], axis=1)
-            print(column_name, col.shape)
+            print(f'3 column_name is {column_name}, col.shape is {col.shape}')
             # input()
             all_columns.append(col)
             all_column_names += [column_name] * col.shape[1]
@@ -220,6 +238,7 @@ class Dataset(data.Dataset):
         if unknown_column:
             raise KeyError(",".join(unknown_column))
         all_columns = np.concatenate(all_columns, axis=-1).astype(np.float32)
+        print(f'all_column_names is {all_column_names}')
         print("Final dimension is %s" % str(all_columns.shape))
         print("max num columns is %d" % max_num_columns)
 

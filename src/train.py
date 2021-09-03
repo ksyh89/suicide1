@@ -421,18 +421,24 @@ def train_ml_compare(info: TrainInformation, split, fold):
 
     train_input = train_dataset.train_data[:, 1:]
     train_label = test_dataset.train_data[:, :1]
-    print (f'train_input.shape is {train_input.shape}')
-    print (f'train_label.shape is {train_label.shape}')
 
-    import sklearn.linear_model
-    print ("hi")
+    #* smote 시작
 
-    from imblearn.over_sampling import SMOTENC
-    smote = SMOTENC(random_state=42, categorical_features=[1, 235])
-    train_input, train_label = smote.fit_resample(train_input, train_label)
-    train_label = torch.unsqueeze(train_label, -1)
-    print (f'train_input.shape is {train_input.shape}')
-    print (f'train_label.shape is {train_label.shape}')
+    #print (f'train_input.shape is {train_input.shape}')
+    #print (f'train_label.shape is {train_label.shape}')
+
+    #import sklearn.linear_model
+    #print ("hi")
+
+    #from imblearn.over_sampling import SMOTENC
+    #smote = SMOTENC(random_state=42, categorical_features=[1, 235])
+    #train_input, train_label = smote.fit_resample(train_input, train_label)
+    #train_label = torch.unsqueeze(train_label, -1)
+    #print (f'train_input.shape is {train_input.shape}')
+    #print (f'train_label.shape is {train_label.shape}')
+
+    #* smote 끝
+
 
     # logisticregressoin ######################
 
@@ -664,7 +670,7 @@ def run(filename):
         #    print("Skipping split %d" % split)
         #    continue
 
-        if True:
+        if False:
             # train_logisticregressoin(info, split, fold)
             # train_supportvectormachine(info, split, fold)
             train_ml_compare(info, split, fold)

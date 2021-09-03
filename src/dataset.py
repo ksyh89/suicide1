@@ -38,6 +38,41 @@ class Dataset(data.Dataset):
         self.train_data = np.concatenate(
             (self.data[:test_start], self.data[test_end:]), axis=0
         )
+
+        # smote
+        from imblearn.over_sampling import SMOTENC
+        categorial_list=[x for x in range (235)]
+        smote = SMOTENC(random_state=42, categorical_features=categorial_list)
+        train_input, train_label = smote.fit_resample(self.train_data[:, 1:], self.train_data[:, :1])
+
+        #print(type(train_label))
+        #print(type(train_input))
+
+        train_label = np.expand_dims(train_label, axis = -1)
+        #print(f'train_input.shape is {train_input.shape}')
+        #print(f'train_label.shape is {train_label.shape}')
+
+        np_smote=np.concatenate([train_label, train_input], axis = -1)
+        #df_smote = pd.DataFrame(np_smote)
+
+        #print (f"df.iloc[0,:] is {df.iloc[0,:]}")
+
+        #print(f"df.columns is {df.columns}")
+
+        #print(f"df_smote.columns is {df_smote.columns}")
+        #df_smote.columns = df.columns
+        #print(f"df_smote.columns is {df_smote.columns}")
+
+        #df_train_input = pd.DataFrame(train_input)
+        #df_train_label = pd.DataFrame(train_label)
+
+        #df[:, 1:] = df_train_input
+        #df[:, :1] = df_train_label
+
+        self.train_data = np_smote
+
+        # smote 끝
+
         self.test_data = self.data[test_start:test_end]
         self.data = self.train_data if phase == "train" else self.test_data
         self.use_data_dropout = use_data_dropout
@@ -65,16 +100,17 @@ class Dataset(data.Dataset):
         column_type = json.load(open(f"{CONFIGPATH}/column_list.json"))
 
         df = pd.read_csv(datapath, sep=",", dtype=column_type)
-        # smote
-        from imblearn.over_sampling import SMOTENC
-        smote = SMOTENC(random_state=42, categorical_features=[1, 235])
-        train_input, train_label = smote.fit_resample(df[:, 1:], df[:, :1])
 
-        train_label = torch.unsqueeze(train_label, -1)
-        print(f'train_input.shape is {train_input.shape}')
-        print(f'train_label.shape is {train_label.shape}')
-        df[:, 1:] = train_input
-        df[:, :1] = train_label
+        # smote
+        #from imblearn.over_sampling import SMOTENC
+        #smote = SMOTENC(random_state=42, categorical_features=[1, 235])
+        #train_input, train_label = smote.fit_resample(df[:, 1:], df[:, :1])
+
+        #train_label = torch.unsqueeze(train_label, -1)
+        #print(f'train_input.shape is {train_input.shape}')
+        #print(f'train_label.shape is {train_label.shape}')
+        #df[:, 1:] = train_input
+        #df[:, :1] = train_label
 
         df, column_names = self.convert_dataset(df, column_type)
 
@@ -110,7 +146,7 @@ class Dataset(data.Dataset):
         empty = pd.isnull(col)
         # print(col[-100:])
         #if empty.any():
-        return_list.append(empty.astype(float))
+        ###return_list.append(empty.astype(float))
 
         if is_categorical:
             col[empty] = "-9999"
@@ -118,13 +154,21 @@ class Dataset(data.Dataset):
             mapping = {v: i for i, v in enumerate(unique_values)}
             print("%d unique values - %s" % (len(unique_values), str(unique_values)))
             new_col = [mapping[v] for v in col]
-            #one_hot_size = 16  # for simplicity, make the size of one hot vector always 16.
-            one_hot_size = len(unique_values)
-            one_hot = np.eye(one_hot_size)[new_col]
-            #col = np.transpose(one_hot)
-            col = one_hot * (1.0 - empty[:, None].astype(float))  # zero out the one-hot vector if empty
+
+
+            ##one_hot_size = 16  # for simplicity, make the size of one hot vector always 16.
+            ##one_hot_size = len(unique_values)
+            ##one_hot = np.eye(one_hot_size)[new_col]
+            ##col = np.transpose(one_hot)
+            ##col = one_hot * (1.0 - empty[:, None].astype(float))  # zero out the one-hot vector if empty
+            col = np.array(new_col) #추가한 것임
+
             print(col.shape, empty.shape)
-            return np.concatenate([empty[:, None].astype(float), col], axis=1)
+            print(empty[:, None])
+
+            ###return np.concatenate([empty[:, None].astype(float), col[:, None]], axis=1)
+            return col[:, None]
+
         else:
             print('numerical')
             print(f'num 1 col.shape is {col.shape}')
@@ -157,8 +201,8 @@ class Dataset(data.Dataset):
                     if not value_between:
                         is_special = np.logical_or(is_special, col == max_small)
                 col[is_special] = 0.0
-                return_list.append(is_special.astype(float))
-            print(f'num 2 np.array(return_list).shape is {col.shape}')
+                ##return_list.append(is_special.astype(float))
+            print(f'num 2 np.array(return_list).shape is {np.array(return_list).shape}')
 
             # 새로 만들어보는중
 
@@ -192,7 +236,7 @@ class Dataset(data.Dataset):
             # print(col[-100:])
             return_list.append(col)
             #print(round(col.nbytes / 1024 / 1024, 2))
-            print(f'num 3 np.array(return_list).shape is {col.shape}')
+            print(f'num 3 np.array(return_list).shape is {np.array(return_list).shape}')
             print(f'np.stack(return_list, axis=1).shape is {(np.stack(return_list, axis=1)).shape}')
             return np.stack(return_list, axis=1)
 
@@ -229,7 +273,8 @@ class Dataset(data.Dataset):
             print(f'2 col.shape is {col.shape}')
             #col = np.stack(col, axis=1)
             colsize = col.shape[1]
-            col = np.concatenate([col, np.zeros((col.shape[0], 25 - colsize), dtype=col.dtype)], axis=1)
+            ##col = np.concatenate([col, np.zeros((col.shape[0], 25 - colsize), dtype=col.dtype)], axis=1)
+
             print(f'3 column_name is {column_name}, col.shape is {col.shape}')
             # input()
             all_columns.append(col)
@@ -255,8 +300,8 @@ class Dataset(data.Dataset):
         x = row[1:]
 
         if self.use_data_dropout:
-            num_variables = x.shape[0] // 25
-            x = x.reshape((num_variables, 25))
+            num_variables = x.shape[0] // 1
+            x = x.reshape((num_variables, 1))
             #dropout_indices = np.random.randint(num_variables)
             dropout_indices = np.random.choice(np.arange(num_variables), size=(int(num_variables // 8)),
                                                replace=False)
